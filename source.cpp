@@ -1,247 +1,230 @@
+
 #include <GL/glut.h>
-#include <cmath>
-#include <algorithm>
-#include <cstdlib>
+#include <stdlib.h>
+#include <math.h>
 
-using namespace std;
+const GLdouble dosPi = 6.283185;
 
-void DDA(int x1, int y1, int x2, int y2, int style) {
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float steps = std::max(abs(dx), abs(dy));
-    float xIncrement = dx / steps;
-    float yIncrement = dy / steps;
-    float x = x1;
-    float y = y1;
+/**
+ * Clase puntoPantalla: Representa un punto en la pantalla con coordenadas (x, y).
+ */
+class puntoPantalla
+{
+public:
+    GLint x, y; // Coordenadas x e y del punto
 
-    glBegin(GL_POINTS);
-    for (int i = 0; i <= steps; i++) {
-        if (style == 0) { // Dibujar puntos
-            if (i % 2 == 0) {
-                glVertex2i(round(x), round(y));
-            }
-        }
-        else if (style == 1) { // Dibujar guiones
-            if (i % 10 < 5) {
-                glVertex2i(round(x), round(y));
-            }
-        }
-        else { // Dibujar línea sólida
-            glVertex2i(round(x), round(y));
-        }
-        x += xIncrement;
-        y += yIncrement;
+public:
+    /**
+     * Constructor por defecto: inicializa la posición de las coordenadas en (0, 0).
+     */
+    puntoPantalla() {
+        x = y = 0;
     }
-    glEnd();
-    glFlush();
-}
 
-void Bresenham(int x1, int y1, int x2, int y2, int style) {
-    int dx = std::abs(x2 - x1);
-    int dy = std::abs(y2 - y1);
-    int sx = x1 < x2 ? 1 : -1;
-    int sy = y1 < y2 ? 1 : -1;
-    int err = dx - dy;
-    int e2;
-
-    glBegin(GL_POINTS);
-    while (true) {
-        if (style == 0) { // Dibujar puntos
-            glVertex2i(x1, y1);
-        }
-        else if (style == 1) { // Dibujar guiones
-            if ((x1 + y1) % 10 < 5) {
-                glVertex2i(x1, y1);
-            }
-        }
-        else { // Dibujar línea sólida
-            glVertex2i(x1, y1);
-        }
-
-        if (x1 == x2 && y1 == y2) break;
-        e2 = err * 2;
-        if (e2 > -dy) {
-            err -= dy;
-            x1 += sx;
-        }
-        if (e2 < dx) {
-            err += dx;
-            y1 += sy;
-        }
+    /**
+     * Establece las coordenadas del punto.
+     * @param xCoordValor Coordenada x.
+     * @param yCoordValor Coordenada y.
+     */
+    void establecerCoordenadas(GLint xCoordValor, GLint yCoordValor) {
+        x = xCoordValor;
+        y = yCoordValor;
     }
-    glEnd();
-    glFlush();
-}
 
+    /**
+     * Obtiene la coordenada x del punto.
+     * @return Coordenada x.
+     */
+    GLint obtenerX() const {
+        return x;
+    }
 
-struct Casa {
-    int x; // origen en x
-    int y; // origen en y
-    int altura;
-    int ancho;
+    /**
+     * Obtiene la coordenada y del punto.
+     * @return Coordenada y.
+     */
+    GLint obtenerY() const {
+        return y;
+    }
+
+    /**
+     * Incrementa la coordenada x en 1.
+     */
+    void incrementarX() {
+        x++;
+    }
+
+    /**
+     * Decrementa la coordenada y en 1.
+     */
+    void decrementarY() {
+        y--;
+    }
 };
 
-void crearCasa(Casa& C) {
-    // Dibujar base de la casa
-    glColor3f(1.0, 0.0, 0.0);
-    DDA(C.x, C.y, C.x + C.ancho, C.y, 2);
-    DDA(C.x + C.ancho, C.y, C.x + C.ancho, C.y + C.altura, 2);
-    DDA(C.x + C.ancho, C.y + C.altura, C.x, C.y + C.altura, 2);
-    DDA(C.x, C.y + C.altura, C.x, C.y, 2);
-
-    // Dibujar techo de la casa
-    glColor3f(0.0, 1.0, 0.0);
-    DDA(C.x, C.y + C.altura, C.x + C.ancho / 2, C.y + C.altura + C.altura / 2, 2);
-    DDA(C.x + C.ancho / 2, C.y + C.altura + C.altura / 2, C.x + C.ancho, C.y + C.altura, 2);
-
-
-    // Dibujar puerta
-    glColor3f(0.5, 0.3, 0.0);
-    int puertaAltura = C.altura / 2;
-    int puertaAncho = C.ancho / 5;
-    int puertaX = C.x + C.ancho / 2 - puertaAncho / 2;
-    int puertaY = C.y;
-    DDA(puertaX, puertaY, puertaX + puertaAncho, puertaY, 2);
-    DDA(puertaX + puertaAncho, puertaY, puertaX + puertaAncho, puertaY + puertaAltura , 2);
-    DDA(puertaX + puertaAncho, puertaY + puertaAltura, puertaX, puertaY + puertaAltura, 2);
-    DDA(puertaX, puertaY + puertaAltura, puertaX, puertaY, 2);
-
-}
-
-void dibujarCasa(void) {
-    Casa C;
-    C.x = 100;
-    C.y = 100;
-    C.altura = 100;
-    C.ancho = 200;
-    crearCasa(C);
-}
-
-
-
-void drawCircle(int xc, int yc, int radius) {
+/**
+ * Establece un píxel en las coordenadas especificadas.
+ * @param xCoord Coordenada x.
+ * @param yCoord Coordenada y.
+ */
+void establecerPixel(GLint xCoord, GLint yCoord)
+{
     glBegin(GL_POINTS);
-    for (int angle = 0; angle <= 360; angle++) {
-        float theta = angle * 3.14159 / 180;
-        int x = xc + radius * cos(theta);
-        int y = yc + radius * sin(theta);
-        glVertex2i(x, y);
-    }
+    glVertex2i(xCoord, yCoord);
     glEnd();
 }
 
+/**
+ * Dibuja una circunferencia usando el algoritmo de punto medio.
+ * @param xc Coordenada x del centro de la circunferencia.
+ * @param yc Coordenada y del centro de la circunferencia.
+ * @param radio Radio de la circunferencia.
+ */
+void circunferenciaPuntoMedio(GLint xc, GLint yc, GLint radio)
+{
+    puntoPantalla puntoCirc;
 
-struct Carro {
-    int x; // origen en x
-    int y; // origen en y
-    int altura;
-    int ancho;
-};
+    // Valor inicial del parámetro de punto medio.
+    GLint p = 1 - radio;
 
+    // Establecer coordenadas para el punto superior de la circunferencia.
+    puntoCirc.establecerCoordenadas(0, radio);
 
-void crearCarro(Carro& C) {
-    // Dibujar cuerpo del carro
-    glColor3f(0.0, 0.0, 1.0);
-    DDA(C.x, C.y, C.x + C.ancho, C.y, 2);
-    DDA(C.x + C.ancho, C.y, C.x + C.ancho, C.y + C.altura, 2);
-    DDA(C.x + C.ancho, C.y + C.altura, C.x, C.y + C.altura, 2);
-    DDA(C.x, C.y + C.altura, C.x, C.y, 2);
+    void dibujarPuntosCircunferencia(GLint, GLint, puntoPantalla);
 
-    // Dibujar cabina del carro
-    glColor3f(1.0, 1.0, 0.0);
-    int cabinaY = C.y + C.altura;
-    DDA(C.x + C.ancho / 4, cabinaY, C.x + 3 * C.ancho / 4, cabinaY, 2);
-    DDA(C.x + 3 * C.ancho / 4, cabinaY, C.x + 3 * C.ancho / 4, cabinaY + C.altura / 2, 2);
-    DDA(C.x + 3 * C.ancho / 4, cabinaY + C.altura / 2, C.x + C.ancho / 4, cabinaY + C.altura / 2, 2);
-    DDA(C.x + C.ancho / 4, cabinaY + C.altura / 2, C.x + C.ancho / 4, cabinaY, 2);
+    // Dibujar el punto inicial en cada cuadrante de la circunferencia.
+    dibujarPuntosCircunferencia(xc, yc, puntoCirc);
 
-    // Dibujar ruedas del carro
-    glColor3f(0.0, 1.0, 0.0);
-    int radio = C.altura / 4;
-    drawCircle(C.x + C.ancho / 4, C.y - radio, radio);
-    drawCircle(C.x + 3 * C.ancho / 4, C.y - radio, radio);
-
-
+    // Calcular el siguiente punto y dibujarlo en cada octante.
+    while (puntoCirc.obtenerX() < puntoCirc.obtenerY()) {
+        puntoCirc.incrementarX();
+        if (p < 0)
+            p += 2 * puntoCirc.obtenerX() + 1;
+        else {
+            puntoCirc.decrementarY();
+            p += 2 * (puntoCirc.obtenerX() - puntoCirc.obtenerY()) + 1;
+        }
+        dibujarPuntosCircunferencia(xc, yc, puntoCirc);
+    }
 }
 
-void dibujarCarro(void) {
-    Carro C;
-    C.x = 200;
-    C.y = 100;
-    C.altura = 50;
-    C.ancho = 100;
-    crearCarro(C);
+/**
+ * Dibuja los puntos de la circunferencia en cada uno de los ocho octantes.
+ * @param xc Coordenada x del centro de la circunferencia.
+ * @param yc Coordenada y del centro de la circunferencia.
+ * @param puntoCirc Punto de la circunferencia a dibujar.
+ */
+void dibujarPuntosCircunferencia(GLint xc, GLint yc, puntoPantalla puntoCirc)
+{
+    establecerPixel(xc + puntoCirc.obtenerX(), yc + puntoCirc.obtenerY());
+    establecerPixel(xc - puntoCirc.obtenerX(), yc + puntoCirc.obtenerY());
+    establecerPixel(xc + puntoCirc.obtenerX(), yc - puntoCirc.obtenerY());
+    establecerPixel(xc - puntoCirc.obtenerX(), yc - puntoCirc.obtenerY());
+    establecerPixel(xc + puntoCirc.obtenerY(), yc + puntoCirc.obtenerX());
+    establecerPixel(xc - puntoCirc.obtenerY(), yc + puntoCirc.obtenerX());
+    establecerPixel(xc + puntoCirc.obtenerY(), yc - puntoCirc.obtenerX());
+    establecerPixel(xc - puntoCirc.obtenerY(), yc - puntoCirc.obtenerX());
 }
 
-//void display() {
-//    glClear(GL_COLOR_BUFFER_BIT);
-//    //dibujarCasa();
-//    dibujarCarro();
-//    glFlush();
-//}
+GLsizei anchoVentana = 400, altoVentana = 300;  // Tamaño inicial de la ventana de visualización.
 
-
-
-void trasladarCasa(Casa& C, int deltaX, int deltaY) {
-    C.x += deltaX;
-    C.y += deltaY;
+/**
+ * Inicializa el estado de la ventana de visualización.
+ */
+void iniciar(void)
+{
+    glClearColor(1.0, 1.0, 1.0, 1.0);  // Establecer color de fondo blanco.
+    glMatrixMode(GL_PROJECTION);  // Establecer modo de proyección.
+    gluOrtho2D(0.0, 200.0, 0.0, 150.0);  // Establecer coordenadas del sistema de referencia.
 }
 
-void escalarCasa(Casa& C, float factor) {
-    C.altura *= factor;
-    C.ancho *= factor;
+/**
+ * Dibuja un gráfico circular (gráfico de pastel).
+ */
+void graficoCircular(void)
+{
+    puntoPantalla centroCirc, puntoPie;
+    GLint radio = anchoVentana / 4;  // Radio de la circunferencia.
+
+    GLdouble anguloSector, anguloSectorAnterior = 0.0;
+
+    GLint k, nSectores = 12;  // Número de sectores.
+    GLfloat valoresDatos[12] = { 10.0, 7.0, 13.0, 5.0, 13.0, 14.0,
+                                 3.0, 16.0, 5.0, 3.0, 17.0, 8.0 };
+    GLfloat sumaDatos = 0.0;
+
+    // Posición del centro de la circunferencia.
+    centroCirc.x = anchoVentana / 2;
+    centroCirc.y = altoVentana / 2;
+    // Llamada a la rutina de dibujo de circunferencia por punto medio.
+    circunferenciaPuntoMedio(centroCirc.x, centroCirc.y, radio);
+
+    // Calcular la suma de todos los valores de datos.
+    for (k = 0; k < nSectores; k++)
+        sumaDatos += valoresDatos[k];
+
+    // Dibujar cada sector del gráfico circular.
+    for (k = 0; k < nSectores; k++) {
+        anguloSector = dosPi * valoresDatos[k] / sumaDatos + anguloSectorAnterior;
+        puntoPie.x = centroCirc.x + radio * cos(anguloSector);
+        puntoPie.y = centroCirc.y + radio * sin(anguloSector);
+        glBegin(GL_LINES);
+        glVertex2i(centroCirc.x, centroCirc.y);
+        glVertex2i(puntoPie.x, puntoPie.y);
+        glEnd();
+        anguloSectorAnterior = anguloSector;
+    }
 }
 
-void trasladarCarro(Carro& C, int deltaX, int deltaY) {
-    C.x += deltaX;
-    C.y += deltaY;
-}
+/**
+ * Función de visualización: se llama para dibujar en la ventana.
+ */
+void funcionVisualizacion(void)
+{
+    glClear(GL_COLOR_BUFFER_BIT);  // Limpiar ventana de visualización.
 
-void escalarCarro(Carro& C, float factor) {
-    C.altura *= factor;
-    C.ancho *= factor;
-}
+    glColor3f(0.0, 1.0, 0.0);  
 
-void dibujarCasaTrasladadaYEscalada(void) {
-    Casa C;
-    C.x = 100;
-    C.y = 100;
-    C.altura = 100;
-    C.ancho = 200;
-    trasladarCasa(C, 10, 20);
-    escalarCasa(C, 1.5);
-    crearCasa(C);
-}
-
-void dibujarCarroTrasladadoYEscalado(void) {
-    Carro C;
-    C.x = 200;
-    C.y = 100;
-    C.altura = 50;
-    C.ancho = 100;
-    trasladarCarro(C, 10, 20);
-    escalarCarro(C, 1.5);
-    crearCarro(C);
-}
-
-void display() {
-    glClear(GL_COLOR_BUFFER_BIT);
-    //dibujarCasaTrasladadaYEscalada();
-    dibujarCarroTrasladadoYEscalado();
+    graficoCircular();  // Dibujar el gráfico circular.
     glFlush();
 }
 
-int main(int argc, char** argv) {
+/**
+ * Ajusta la ventana cuando se redimensiona.
+ * @param nuevoAncho Nuevo ancho de la ventana.
+ * @param nuevoAlto Nuevo alto de la ventana.
+ */
+void ajustarVentana(GLint nuevoAncho, GLint nuevoAlto)
+{
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0.0, GLdouble(nuevoAncho), 0.0, GLdouble(nuevoAlto));
+
+    glClear(GL_COLOR_BUFFER_BIT);  // Limpiar la ventana de visualización.
+
+    // Restablecer los parámetros de tamaño de la ventana de visualización.
+    anchoVentana = nuevoAncho;
+    altoVentana = nuevoAlto;
+}
+
+/**
+ * Función principal: punto de entrada del programa.
+ * @param argc Número de argumentos de línea de comandos.
+ * @param argv Lista de argumentos de línea de comandos.
+ * @return Código de salida del programa.
+ */
+int main(int argc, char** argv)
+{
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-    glutInitWindowSize(500, 500);
-    glutCreateWindow("Casa y Carro Trasladados y Escalados");
-    gluOrtho2D(0, 500, 0, 500);
-    glutDisplayFunc(display);
-    glutMainLoop();
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);  // Modo de visualización.
+    glutInitWindowPosition(100, 100);  // Posición inicial de la ventana.
+    glutInitWindowSize(anchoVentana, altoVentana);  // Tamaño inicial de la ventana.
+    glutCreateWindow("Gráfico Circular");  // Crear ventana con título.
+
+    iniciar();  // Inicializar estado de la ventana.
+    glutDisplayFunc(funcionVisualizacion);  // Registrar función de visualización.
+    glutReshapeFunc(ajustarVentana);  // Registrar función de redimensionamiento.
+
+    glutMainLoop();  // Entrar en el bucle principal de GLUT.
     return 0;
 }
-
-
-
-
